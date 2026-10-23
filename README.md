@@ -29,6 +29,23 @@ The whole chain is checked, not just the leaf certificate, so you can pin an int
    ```
 3. Put the host and hash into `Demo.fetchSecurely()` and call it from your app or a test target.
 
+### Getting a backup pin from the intermediate CA
+
+The leaf key changes on every certificate renewal, so a leaf-only pin means shipping an app update at each renewal. Pin the intermediate CA's public key as the backup: it survives renewals issued by the same CA.
+
+1. Save the server's certificate chain:
+   ```
+   openssl s_client -connect api.example.com:443 -servername api.example.com -showcerts </dev/null 2>/dev/null > chain.pem
+   ```
+2. Open `chain.pem` and copy the SECOND `-----BEGIN CERTIFICATE-----` block into a new file called `intermediate.pem`.
+3. Hash its public key with the same pipeline:
+   ```
+   openssl x509 -in intermediate.pem -pubkey -noout \
+     | openssl pkey -pubin -outform DER \
+     | openssl dgst -sha256 -binary | base64
+   ```
+4. Add that hash to `PinningConfig` next to the leaf pin, so every host has at least two pins.
+
 ## Try it yourself
 
 1. Install Burp Suite's CA certificate on a test iPhone.
